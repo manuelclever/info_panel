@@ -1,0 +1,24 @@
+===== ICS =====
+===== PROPERTY =====
+VERSION:2.0
+CALSCALE:GREGORIAN
+PRODID:-//hacksw/handcal//NONSGML v1.0//EN
+===== COMPONENT =====
+VEVENT
+	==== PROPERTY ====
+	UID:082c600294b2948e371fee12ae989ff5@eaw-rtk.de
+	DTSTART:20220726
+		=== PARAMETER ===
+		VALUE:DATE
+	DTEND:20220727
+		=== PARAMETER ===
+		VALUE:DATE
+	X-FUNAMBOL-ALLDAY:1
+	X-MICROSOFT-CDO-ALLDAYEVENT:TRUE
+	TRANSP:TRANSPARENT
+	SUMMARY:Restmülltonne\, Biotonne\, Altpapiertonne\, Gelber Sack
+	DESCRIPTION:
+	URL:https://www.eaw-rtk.de/abfallkalender/?cityid=2&districtid=9&streetid=191
+		=== PARAMETER ===
+		VALUE:URI
+	DTSTAMP:20220822T181009Z

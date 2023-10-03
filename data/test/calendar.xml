@@ -1,0 +1,88 @@
+<?xml version="1.0"?>
+<d:multistatus
+        xmlns:d="DAV:"
+        xmlns:s="http://sabredav.org/ns"
+        xmlns:cal="urn:ietf:params:xml:ns:caldav"
+        xmlns:cs="http://calendarserver.org/ns/"
+        xmlns:oc="http://owncloud.org/ns"
+>
+    <d:response>
+        <d:href>/nextcloud/remote.php/dav/calendars/user/abfall/</d:href>
+        <d:propstat>
+            <d:prop>
+                <d:resourcetype>
+                    <d:collection/>
+                    <cal:calendar/>
+                </d:resourcetype>
+                <cs:getctag>http://sabre.io/ns/sync/32</cs:getctag>
+                <s:sync-token>32</s:sync-token>
+                <cal:supported-calendar-component-set>
+                    <cal:comp name="VEVENT"/>
+                </cal:supported-calendar-component-set>
+                <cal:schedule-calendar-transp>
+                    <cal:opaque/>
+                </cal:schedule-calendar-transp>
+                <oc:owner-principal>principals/users/user</oc:owner-principal>
+                <d:displayname>Abfall</d:displayname>
+                <cal:calendar-timezone>BEGIN:VCALENDAR
+                    PRODID:-//IDN nextcloud.com//Calendar app 3.4.2//EN
+                    CALSCALE:GREGORIAN
+                    VERSION:2.0
+                    BEGIN:VTIMEZONE
+                    TZID:Europe/Berlin
+                    BEGIN:DAYLIGHT
+                    TZOFFSETFROM:+0100
+                    TZOFFSETTO:+0200
+                    TZNAME:CEST
+                    DTSTART:19700329T020000
+                    RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU
+                    END:DAYLIGHT
+                    BEGIN:STANDARD
+                    TZOFFSETFROM:+0200
+                    TZOFFSETTO:+0100
+                    TZNAME:CET
+                    DTSTART:19701025T030000
+                    RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU
+                    END:STANDARD
+                    END:VTIMEZONE
+                    END:VCALENDAR</cal:calendar-timezone>
+                <x1:calendar-order
+                        xmlns:x1="http://apple.com/ns/ical/">0
+                </x1:calendar-order>
+                <x1:calendar-color
+                        xmlns:x1="http://apple.com/ns/ical/">#D09E6D
+                </x1:calendar-color>
+                <x2:owner-displayname
+                        xmlns:x2="http://nextcloud.com/ns">User
+                </x2:owner-displayname>
+            </d:prop>
+            <d:status>HTTP/1.1 200 OK</d:status>
+        </d:propstat>
+    </d:response>
+    <d:response>
+        <d:href>/nextcloud/remote.php/dav/calendars/user/abfall/D9F0AFEB-6B0A-434A-99B8-EE64C8E27526.ics</d:href>
+        <d:propstat>
+            <d:prop>
+                <d:getlastmodified>Mon, 22 Aug 2022 18:10:09 GMT</d:getlastmodified>
+                <d:getcontentlength>465</d:getcontentlength>
+                <d:resourcetype/>
+                <d:getetag>&quot;a86c24c6146b1965dff7da97f2e433cf&quot;</d:getetag>
+                <d:getcontenttype>text/calendar; charset=utf-8; component=vevent</d:getcontenttype>
+            </d:prop>
+            <d:status>HTTP/1.1 200 OK</d:status>
+        </d:propstat>
+    </d:response>
+    <d:response>
+    <d:href>/nextcloud/remote.php/dav/calendars/user/abfall/BFB6E10D-1C74-4B62-A566-1F75F8BD0893.ics</d:href>
+    <d:propstat>
+        <d:prop>
+            <d:getlastmodified>Mon, 22 Aug 2022 18:10:09 GMT</d:getlastmodified>
+            <d:getcontentlength>513</d:getcontentlength>
+            <d:resourcetype/>
+            <d:getetag>&quot;742dd33eb021a68e783e046bc77a6f97&quot;</d:getetag>
+            <d:getcontenttype>text/calendar; charset=utf-8; component=vevent</d:getcontenttype>
+        </d:prop>
+        <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+    </d:response>
+</d:multistatus>
