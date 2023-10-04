@@ -51,7 +51,7 @@ impl<'a> Connection {
         }
     }
 
-    pub(crate) fn get_event(&self, path: &str) -> Result<String, Error> {
+    pub(crate) fn get_ics_file(&self, path: &str) -> Result<String, Error> {
         let url = &format!("{}{}", self.url, path);
         println!("url: {}",url);
 
@@ -125,7 +125,7 @@ mod tests {
 
         assert_eq!(calendar.unwrap(), Connection {
             url: String::from("https://diesisteintest.de/webdavoderso"),
-            webdav_client: Client::init("user", "geheim")});
+            webdav_client: Client::init("user", "geheim")
+        });
     }
-
 }

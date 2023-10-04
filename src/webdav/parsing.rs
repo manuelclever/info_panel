@@ -2,15 +2,14 @@ extern crate chrono;
 
 use std::borrow::Cow;
 
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use icalendar::Property;
 use quick_xml::events::{BytesStart, Event as QuickXmlEvent};
 use quick_xml::reader::Reader;
 
 use response::prop::Prop;
 
 use crate::webdav::response;
-use crate::webdav::calendar::ical_object::ICalObject;
-
 
 pub fn extract_response_xml (string: &str) -> Vec<Cow<str>> {
     let mut reader = Reader::from_str(string);
@@ -173,52 +172,21 @@ pub fn parse_prop(string: &str) -> Prop {
     prop
 }
 
-pub fn parse_ical_object(string: &str) -> ICalObject {
+pub fn parse_date(property: &Property) -> NaiveDateTime {
 
-    let mut event: ICalObject = ICalObject::new();
+    //if it has parameters, its just a date
+    if property.params().len() > 0 {
 
-    let mut is_all_day: bool = false;
-    let mut date_start: &str = "";
-    let mut date_end: &str = "";
-
-    for line in string.lines() {
-        let pair: Vec<&str> = line.splitn(2, |c| c == ':' || c == ';').collect();
-
-        if pair.len() >= 2 {
-            let key: &str = pair.get(0).unwrap();
-            let value: &str = pair.get(1).unwrap();
-
-            match key {
-                "CALSCALE" => event.cal_scale = value.to_string(),
-                "UID" => event.uid = value.to_string(),
-                "DTSTART" => date_start = value,
-                "DTEND" => date_end = value,
-                "X-FUNAMBOL-ALLDAY" => {
-                    is_all_day = value == "1";
-                    event.is_all_day = is_all_day},
-                "SUMMARY" => event.summary = value.to_string(),
-                "DESCRIPTION" => event.desc = value.to_string(),
-                "DTSTAMP" => event.date_timestamp = parse_date_time(value),
-                _ => {}
-            }
-        }
+        return NaiveDateTime::new(
+            parse_ymd(property.value()),
+            NaiveTime::default())
     }
 
-    if is_all_day {
-        event.date_start = parse_date(date_start).and_hms_opt(0, 0, 0).unwrap();
-        event.date_end = parse_date(date_end).and_hms_opt(0, 0, 0).unwrap();
-    } else {
-        event.date_start = parse_date_time(date_start);
-        event.date_end = parse_date_time(date_end);
-    }
-
-    event
+    parse_ymd_hms(property.value())
 }
 
-fn parse_date(string: &str) -> NaiveDate {
-    if string != "" {
-        let date: &str = string.split(":").collect::<Vec<&str>>().get(1).unwrap();
-
+fn parse_ymd(date: &str) -> NaiveDate {
+    if date != "" {
         return match NaiveDate::parse_from_str(date, "%Y%m%d") {
             Ok(date) => {
                 date
@@ -231,7 +199,7 @@ fn parse_date(string: &str) -> NaiveDate {
     NaiveDate::default()
 }
 
-fn parse_date_time(string: &str) -> NaiveDateTime {
+fn parse_ymd_hms(string: &str) -> NaiveDateTime {
     match NaiveDateTime::parse_from_str(string, "%Y%m%dT%H%M%S%.fZ") {
         Ok(date) => {
             date
@@ -247,12 +215,13 @@ mod tests {
     use std::borrow::Cow;
     use std::fs::File;
     use std::io::Read;
+    use std::str::FromStr;
 
     use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+    use icalendar::Property;
 
-    use crate::webdav::calendar::ical_object::ICalObject;
     use crate::webdav::parsing;
-    use crate::webdav::parsing::{parse_ical_object, parse_prop};
+    use crate::webdav::parsing::{parse_date, parse_prop};
     use crate::webdav::response::prop::Prop;
 
     fn get_xml(name: &str) -> String {
@@ -384,56 +353,37 @@ mod tests {
         let prop: Prop = parse_prop(&prop_string);
 
         let expected_prop: Prop = Prop {
-                    resourcetype: String::from(""),
-                    displayname: String::from(""),
-                    calendar_timezone: String::from(""),
-                    last_modified: "Mon, 22 Aug 2022 18:10:09 GMT".parse().unwrap(),
-                    content_length: 465,
-                    e_tag: "&quot;a86c24c6146b1965dff7da97f2e433cf&quot;".parse().unwrap(),
-                    content_type: "text/calendar; charset=utf-8; component=vevent".parse().unwrap() };
+            resourcetype: String::from(""),
+            displayname: String::from(""),
+            calendar_timezone: String::from(""),
+            last_modified: "Mon, 22 Aug 2022 18:10:09 GMT".parse().unwrap(),
+            content_length: 465,
+            e_tag: "&quot;a86c24c6146b1965dff7da97f2e433cf&quot;".parse().unwrap(),
+            content_type: "text/calendar; charset=utf-8; component=vevent".parse().unwrap() };
 
         assert_eq!(prop, expected_prop);
     }
 
     #[test]
-    fn event_parsing() {
-        let event: ICalObject = parse_ical_object(
-            "BEGIN:VCALENDAR
-VERSION:2.0
-CALSCALE:GREGORIAN
-PRODID:-//hacksw/handcal//NONSGML v1.0//EN
-BEGIN:VEVENT
-UID:ab2abbc6854d1c58daa84520d6198074@eaw-rtk.de
-DTSTART;VALUE=DATE:20221102
-DTEND;VALUE=DATE:20221103
-X-FUNAMBOL-ALLDAY:1
-X-MICROSOFT-CDO-ALLDAYEVENT:TRUE
-TRANSP:TRANSPARENT
-SUMMARY:Tonnentausch
-DESCRIPTION:
-URL;VALUE=URI:https://www.eaw-rtk.de/abfallkalender/?cityid=2&districtid=9&
- streetid=191
-DTSTAMP:20220822T181011Z
-END:VEVENT
-END:VCALENDAR");
+    fn date_parsing() {
+        let input_vec: Vec<Property> = vec![
+            Property::from_str("DTSTART;VALUE=DATE:20220726").unwrap(),
+            Property::from_str("DTSTAMP:20220822T181009Z").unwrap()];
 
-        let expectet_event = ICalObject {
-            cal_scale:"GREGORIAN".to_string(),
-            uid: "ab2abbc6854d1c58daa84520d6198074@eaw-rtk.de".to_string(),
-            date_start: NaiveDateTime::new(
-                NaiveDate::from_ymd_opt(2022, 11, 2).unwrap(),
-                NaiveTime::from_hms_opt(0, 0, 0).unwrap()),
-            date_end: NaiveDateTime::new(
-                NaiveDate::from_ymd_opt(2022, 11, 3).unwrap(),
-            NaiveTime::from_hms_opt(0, 0, 0).unwrap()),
-            is_all_day: true,
-            summary: "Tonnentausch".to_string(),
-            desc: "".to_string(),
-            date_timestamp: NaiveDateTime::new(
-                NaiveDate::from_ymd_opt(2022, 8, 22).unwrap(),
-                NaiveTime::from_hms_opt(18, 10, 11).unwrap())};
+        let mut output_vec: Vec<NaiveDateTime> = Vec::new();
+        for input in input_vec {
+            output_vec.push(parse_date(&input));
+        }
 
-        assert_eq!(event, expectet_event);
+        let expected_output_vec: Vec<NaiveDateTime> = vec![
+            NaiveDateTime::new(
+                NaiveDate::from_ymd_opt(2022,07,26).unwrap(),
+                NaiveTime::default()
+            ),
+            NaiveDateTime::new(
+                NaiveDate::from_ymd_opt(2022,08,22).unwrap(),
+                NaiveTime::from_hms_opt(18,10,09).unwrap()),];
 
+        assert_eq!(output_vec, expected_output_vec);
     }
 }

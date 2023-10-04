@@ -1,15 +1,14 @@
-use reqwest::Error as ReqwestError;
+use icalendar::Component;
 
-use crate::webdav::calendar::Calendar;
 use crate::webdav::read_calendar;
 
 mod webdav;
 
 fn main() {
-    let result: Result<Calendar,ReqwestError> = read_calendar("default.config","abfall");
+    let option = read_calendar("default.config","persnlich");
 
-    match result {
-        Ok(calendar) => println!("{}",calendar),
-        Err(e) => println!("Error reading calendar: {}", e)
+    match option {
+        Some(calendar) => println!("{}", calendar),
+        None => ()
     }
 }
