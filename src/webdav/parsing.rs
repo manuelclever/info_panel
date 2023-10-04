@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use icalendar::Property;
-use quick_xml::events::{BytesStart, Event as QuickXmlEvent};
+use quick_xml::events::{BytesEnd, BytesStart, Event as QuickXmlEvent};
 use quick_xml::reader::Reader;
 
 use response::prop::Prop;
@@ -46,24 +46,7 @@ pub fn extract_href_xml (string: &str) -> Cow<str> {
     let start_response = BytesStart::new("d:href");
     let end_response   = start_response.to_end().into_owned();
 
-    loop {
-        match reader.read_event() {
-            Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
-            Ok(QuickXmlEvent::Eof) => break,
-            Ok(QuickXmlEvent::Start(e)) => {
-                e.name().into_inner();
-                match e.name().as_ref() {
-                    name if name == start_response.name().as_ref()  => {
-                        let inner_xml = reader.read_text(end_response.name()).unwrap();
-                        return inner_xml
-                    },
-                    _ => (),
-                }
-            }
-            _ => (),
-        }
-    }
-    Cow::from("")
+    get_inner_xml(reader,start_response,end_response)
 }
 
 pub fn extract_propstat_xml (string: &str) -> Cow<str> {
@@ -73,6 +56,10 @@ pub fn extract_propstat_xml (string: &str) -> Cow<str> {
     let start_response = BytesStart::new("d:propstat");
     let end_response   = start_response.to_end().into_owned();
 
+    get_inner_xml(reader,start_response,end_response)
+}
+
+fn get_inner_xml<'a>(mut reader: Reader<&'a [u8]>, start_response: BytesStart, end_response: BytesEnd) -> Cow<'a, str> {
     loop {
         match reader.read_event() {
             Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
