@@ -14,7 +14,7 @@ pub struct Calendar {
     pub name: String,
     pub events: Vec<VEvent>,
     pub todos: Vec<VTodo>,
-    pub timezone: VTimezone,
+    pub timezone: Option<VTimezone>,
 }
 
 impl Calendar {
@@ -31,7 +31,7 @@ impl Calendar {
 
 impl fmt::Display for Calendar {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[Name: {}, events: {}, todos:{}, timezone: {}]",
+        write!(f, "[Name: {}, events: {}, todos:{}]",
                self.name,
                self.events.iter()
                    .map(|obj| obj.to_string())
@@ -40,7 +40,6 @@ impl fmt::Display for Calendar {
                self.todos.iter()
                    .map(|obj| obj.to_string())
                    .collect::<Vec<String>>()
-                   .join(", "),
-               self.timezone)
+                   .join(", "))
     }
 }
