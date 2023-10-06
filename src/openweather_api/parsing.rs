@@ -3,7 +3,7 @@ use json::JsonValue;
 
 use crate::openweather_api::weather_entry::{Clouds, Main, Weather, WeatherEntry, Wind};
 
-pub(crate) fn parse_json(json_string: &str) -> Option<Vec<WeatherEntry>> {
+pub(crate) fn parse_json_open_weather(json_string: &str) -> Option<Vec<WeatherEntry>> {
     let weather_obj = json::parse(&json_string);
     let mut weather_entries: Vec<WeatherEntry> = Vec::new();
 
@@ -120,14 +120,14 @@ fn convert_to_pod(json: &JsonValue) -> char {
 mod test {
     use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
-    use crate::openweather_api::parsing::parse_json;
+    use crate::openweather_api::parsing::parse_json_open_weather;
     use crate::openweather_api::weather_entry::{Clouds, Main, Weather, WeatherEntry, Wind};
 
     #[test]
     fn json_parsing() {
         let input = r#"{"cod":"200","message":0,"cnt":40,"list":[{"dt":1696496400,"main":{"temp":12.71,"feels_like":12.31,"temp_min":12.71,"temp_max":14.26,"pressure":1026,"sea_level":1026,"grnd_level":995,"humidity":87,"temp_kf":-1.55},"weather":[{"id":804,"main":"Clouds","description":"overcast clouds","icon":"04d"}],"clouds":{"all":100},"wind":{"speed":3.33,"deg":258,"gust":6.51},"visibility":10000,"pop":0,"sys":{"pod":"d"},"dt_txt":"2023-10-05 09:00:00"},{"dt":1696507200,"main":{"temp":13.77,"feels_like":13.21,"temp_min":13.77,"temp_max":15.89,"pressure":1026,"sea_level":1026,"grnd_level":995,"humidity":77,"temp_kf":-2.12},"weather":[{"id":804,"main":"Clouds","description":"overcast clouds","icon":"04d"}],"clouds":{"all":100},"wind":{"speed":3.38,"deg":278,"gust":5.34},"visibility":10000,"pop":0,"sys":{"pod":"d"},"dt_txt":"2023-10-05 12:00:00"}]}"#;
 
-        let parsed = parse_json(&input);
+        let parsed = parse_json_open_weather(&input);
         match parsed {
             Some(output) => {
                 let output_expected = vec![

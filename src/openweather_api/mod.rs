@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-use reqwest::blocking::Client;
+use reqwest::Client;
 
 mod weather_entry;
 pub(crate) mod parsing;
@@ -61,18 +61,26 @@ impl OpenWeatherClient {
         })
     }
 
-    pub(crate) fn make_request_3h_5d(&self) -> String {
+    pub(crate) async fn make_request_3h_5d(&self) -> String {
         let geocoding_url = format!("{}?lat={}&lon={}&units={}&appid={}",
                                     self.url, self.lat,self.lon,self.units,self.api_key);
 
         println!("New Request: {}", geocoding_url);
         let client = Client::new();
-        let response = client.get(geocoding_url).send().unwrap();
 
-        return if response.status().is_success() {
-            response.text().unwrap()
-        } else {
-            format!("Request failed with status code: {:?}", response.status())
+        return match client.get(geocoding_url).send().await {
+            Ok(response) => {
+
+                if response.status().is_success() {
+                    match response.text().await {
+                        Ok(json) => json,
+                        _ => format!("Request failed")
+                    }
+                } else {
+                    format!("Request failed with status code {}.", response.status().to_string())
+                }
+            },
+            _ => format!("Request failed")
         }
     }
 }
