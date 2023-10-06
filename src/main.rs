@@ -1,7 +1,8 @@
 use std::fs;
 use std::net::SocketAddr;
 
-use axum::response::Html;
+use axum::handler::HandlerWithoutStateExt;
+use axum::response::{Html, IntoResponse};
 use axum::Router;
 use axum::routing::get;
 use icalendar::Component;
@@ -21,7 +22,10 @@ async fn main() {
 
     // A closure or a function can be used as handler.
 
-    let app = Router::new().route("/", get(handler));
+    let app = Router::new()
+        .nest("/images", axum_static::static_router("data/images"))
+        .nest("/styles", axum_static::static_router("data/styles"))
+        .route("/", get(handler));
     //        Router::new().route("/", get(|| async { "Hello, world!" }));
 
     // Address that server will bind to.
@@ -34,6 +38,7 @@ async fn main() {
         .await
         .unwrap();
 }
+
 
 async fn handler() -> Html<String> {
     let path = "src/website/index.html";
@@ -65,7 +70,7 @@ async fn set_weather_data(html_content: &String) -> String {
                     let weather_entry_9 = weather.get(3).unwrap();
 
                     let mut modified_html_content = html_content.replace("#temp_current", weather_entry_current.main.temp.to_string().as_str());
-                    modified_html_content = modified_html_content.replace("#desc", weather_entry_current.weather.main.to_string().as_str());
+                    modified_html_content = modified_html_content.replace("#desc", weather_entry_current.weather.description.to_string().as_str());
                     modified_html_content = modified_html_content.replace("#feel_like_current", weather_entry_current.main.feels_like.to_string().as_str());
                     modified_html_content = modified_html_content.replace("#humidity_current", weather_entry_current.main.humidity.to_string().as_str());
                     modified_html_content = modified_html_content.replace("#max_temp_current", weather_entry_current.main.temp_max.to_string().as_str());
@@ -82,6 +87,11 @@ async fn set_weather_data(html_content: &String) -> String {
                     modified_html_content = modified_html_content.replace("#time_+9", weather_entry_9.time_of_forecast.time().to_string().as_str());
                     modified_html_content = modified_html_content.replace("#temp_+9", weather_entry_9.main.temp.to_string().as_str());
                     modified_html_content = modified_html_content.replace("#rain_+9", weather_entry_9.precipitation_probability.to_string().as_str());
+
+                    let icon_current = &weather_entry_current.weather.icon;
+
+
+
 
                     modified_html_content
                 },
