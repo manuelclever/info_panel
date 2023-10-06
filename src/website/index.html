@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+    <head>
+        <title>planningscreen</title>
+        <link rel="stylesheet" type="text/css" href="styles.css">
+    </head>
+    <body>
+        <table id="outmostTable">
+            <tr>
+                <td>
+                    <table id="weatherTable">
+                        <tr>
+                            <td rowspan="2">#icon_current</td>
+                            <td rowspan="2">#temp_current</td>
+                            <td rowspan="2">#desc</td>
+                            <td colspan="2">#sunrise</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">#sunrise</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4">#feel_like_current #humidity_current #max_temp_current #rain_current</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">#icon_+3</td>
+                            <td colspan="2">#icon_+6</td>
+                            <td colspan="2">#icon_+9</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">#time_+3</td>
+                            <td colspan="2">#time_+6</td>
+                            <td colspan="2">#time_+9</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">#temp_+3</td>
+                            <td colspan="2">#temp_+6</td>
+                            <td colspan="2">#temp_+9</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">#rain_+3</td>
+                            <td colspan="2">#rain_+6</td>
+                            <td colspan="2">#rain_+9</td>
+                        </tr>
+                    </table>
+                </td>
+                <td rowspan="2">
+                    <table id="eventTable">
+                        <tr>
+                            <td id="dayOfWeek">Freitag</td>
+                            <td id="garbageIcons">Müll</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">01.01.2023</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">Events</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <table id="taskTable">
+                        <tr>
+                            <td>Aufgaben</td>
+                        </tr>
+                    </table>
+                </td>
+
+            </tr>
+        </table>
+    </body>
+</html>

@@ -1,0 +1,34 @@
+:root {
+    --width: 800px;
+    --height: 400px;
+}
+
+td {
+    text-align: center;
+}
+
+#outmostTable {
+    width: var(--width);
+    height: var(--height);
+    border: 1px solid #000;
+
+    display: flex;
+    flex-direction: column;
+}
+
+#weatherTable,
+#taskTable,
+#eventTable {
+    width: 100%;
+    border: 1px solid red;
+
+    table-layout: fixed;
+}
+
+#dayOfWeek {
+    text-align: left;
+}
+
+#garbageIcons {
+    text-align: right;
+}
