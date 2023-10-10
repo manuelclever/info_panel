@@ -12,6 +12,7 @@ use crate::openweather_api::parsing::parse_json_open_weather;
 
 mod webdav;
 mod openweather_api;
+pub mod filesystem;
 
 #[tokio::main]
 async fn main() {
@@ -26,7 +27,6 @@ async fn main() {
         .nest("/images", axum_static::static_router("data/images"))
         .nest("/styles", axum_static::static_router("data/styles"))
         .route("/", get(handler));
-    //        Router::new().route("/", get(|| async { "Hello, world!" }));
 
     // Address that server will bind to.
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
@@ -59,7 +59,7 @@ async fn set_weather_data(html_content: &String) -> String {
 
     return match result {
         Ok(client) => {
-            let json = client.make_request_3h_5d().await;
+            let json = client.make_request_forecast_3h_5d().await;
             let option = parse_json_open_weather(&json);
 
             return match option {
@@ -88,7 +88,10 @@ async fn set_weather_data(html_content: &String) -> String {
                     modified_html_content = modified_html_content.replace("#temp_+9", weather_entry_9.main.temp.to_string().as_str());
                     modified_html_content = modified_html_content.replace("#rain_+9", weather_entry_9.precipitation_probability.to_string().as_str());
 
-                    let icon_current = &weather_entry_current.weather.icon;
+
+                    if client.download_icon(&weather_entry_current.weather.icon).await {
+                        println!("Success downloading icon.")
+                    }
 
 
 
