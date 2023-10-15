@@ -1,5 +1,5 @@
 [package]
-name = "planningscreen"
+name = "info_panel"
 version = "0.1.0"
 edition = "2021"
 
