@@ -1,6 +1,8 @@
 use std::error::Error;
+use std::fs;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
+use std::time::{Duration, SystemTime};
 
 use reqwest::Client;
 
@@ -95,59 +97,73 @@ impl OpenWeatherClient {
         }
     }
 
-    pub(crate) async fn download_icon(&self, icon: &str) -> bool {
-
+    pub(crate) async fn download_icon(&self, icon: &str) -> Result<(), String> {
         let request_url = format!("{}/{}@2x.png", self.url_img, icon);
-
         println!("New Request: {}", request_url);
+
         let client = Client::new();
+        let response = client.get(request_url).send().await
+            .or(Err("Failed to send request"))?;
 
-        return match client.get(request_url).send().await {
-            Ok(response) => {
-                if response.status().is_success() {
-                    return match response.bytes().await {
-                        Ok(image_bytes) => {
-                            return match FileSystemHandler::new() {
-                                Ok(filesystem_handler) => {
-                                    return match filesystem_handler.create_directory("weather_icons") {
-                                        Ok(absolute_path) => {
-                                            return match File::create(format!("{}/{}", absolute_path, icon)) {
-                                                Ok(mut file) => {
-                                                    println!("Write to file: '{}'", absolute_path);
-                                                    return match file.write_all(&image_bytes) {
-                                                        Ok(_) => true,
-                                                        Err(_) => false
-                                                    }
-                                                },
-                                                Err(e) => false
+        if !response.status().is_success() {
+            return Err("Failed to download image".into());
+        }
 
-                                            }
-                                        },
-                                        Err(e) => false
-                                    }
-                                },
-                                Err(_) => false
-                            }
-                        },
-                        Err(_) => false
-                    }
-                } else {
-                    false
-                }
-            },
-            _ => false
-        };
+        let image_bytes = response.bytes().await
+            .or(Err("Failed to read bytes of response"))?;
 
+        let filesystem_handler = FileSystemHandler::new()
+            .or(Err("Failed to create FileHandler"))?;
 
+        let absolute_path = filesystem_handler.create_directory("weather_icons")
+            .or(Err("Failed to create 'weather_icons' directory"))?;
 
+        let icon_path = format!("{}/{}.png", absolute_path, icon);
 
+        if fs::metadata(&icon_path).is_err() && need_new_file(&icon_path) {
+            let mut file = File::create(&icon_path)
+                .or(Err(format!("Failed to create file '{}'", icon_path)))?;
 
+            return if file.write_all(&image_bytes).is_ok() {
+                Ok(())
+            } else {
+                Err(format!("Failed to write image bytes to file '{}'", icon_path))
+            }
+        }
 
-
-
-
+        Ok(())
     }
 }
+
+fn need_new_file(path: &str) -> bool {
+    let metadata = fs::metadata(path);
+
+    // if last_modification date can't be read, just return false, so a new file will be downloaded
+    if metadata.is_err() {
+        return true
+    }
+
+    let now: SystemTime = SystemTime::now();
+    let months: u64 = 3;
+
+    let modified_time = metadata.unwrap().modified();
+    if modified_time.is_err() {
+        return true
+    }
+
+    let duration = now.duration_since(modified_time.unwrap());
+    if duration.is_err() {
+        return true
+    }
+
+    let three_months = Duration::from_secs(60 * 60 * 24 * 30 * months);
+    if duration.unwrap() > three_months {
+        true
+    } else {
+        false
+    }
+}
+
 
 #[cfg(test)]
 mod test {

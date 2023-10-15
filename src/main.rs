@@ -5,6 +5,7 @@ use axum::handler::HandlerWithoutStateExt;
 use axum::response::{Html, IntoResponse};
 use axum::Router;
 use axum::routing::get;
+use dirs::home_dir;
 use icalendar::Component;
 
 use crate::openweather_api::OpenWeatherClient;
@@ -16,15 +17,22 @@ pub mod filesystem;
 
 #[tokio::main]
 async fn main() {
+    let home_dir = match home_dir() {
+        Some(dir) => dir,
+        None => {
+            eprintln!("Failed to get the user's home directory");
+            return;
+        }
+    };
+
     // Route all requests on "/" endpoint to anonymous handler.
     //
     // A handler is an async function which returns something that implements
     // `axum::response::IntoResponse`.
 
     // A closure or a function can be used as handler.
-
     let app = Router::new()
-        .nest("/images", axum_static::static_router("data/images"))
+        .nest("/weather_icons", axum_static::static_router(home_dir.join(".InfoPanel/weather_icons")))
         .nest("/styles", axum_static::static_router("data/styles"))
         .route("/", get(handler));
 
@@ -89,12 +97,34 @@ async fn set_weather_data(html_content: &String) -> String {
                     modified_html_content = modified_html_content.replace("#rain_+9", weather_entry_9.precipitation_probability.to_string().as_str());
 
 
-                    if client.download_icon(&weather_entry_current.weather.icon).await {
-                        println!("Success downloading icon.")
+                    match client.download_icon(&weather_entry_current.weather.icon).await  {
+                        Ok(_) => println!("Success reading icon current weather."),
+                        Err(msg) => println!("{}",msg)
+
                     }
 
+                    match client.download_icon(&weather_entry_3.weather.icon).await  {
+                        Ok(_) => println!("Success reading icon weather+3."),
+                        Err(msg) => println!("{}",msg)
 
+                    }
 
+                    match client.download_icon(&weather_entry_6.weather.icon).await  {
+                        Ok(_) => println!("Success reading icon weather+6."),
+                        Err(msg) => println!("{}",msg)
+
+                    }
+
+                    match client.download_icon(&weather_entry_9.weather.icon).await  {
+                        Ok(_) => println!("Success reading icon weather+9."),
+                        Err(msg) => println!("{}",msg)
+
+                    }
+
+                    modified_html_content = modified_html_content.replace("#icon_current", &format!("/weather_icons/{}.png", &weather_entry_current.weather.icon)).to_string();
+                    modified_html_content = modified_html_content.replace("#icon_+3", &format!("/weather_icons/{}.png", &weather_entry_3.weather.icon)).to_string();
+                    modified_html_content = modified_html_content.replace("#icon_+6", &format!("/weather_icons/{}.png", &weather_entry_6.weather.icon)).to_string();
+                    modified_html_content = modified_html_content.replace("#icon_+9", &format!("/weather_icons/{}.png", &weather_entry_9.weather.icon)).to_string();
 
                     modified_html_content
                 },
