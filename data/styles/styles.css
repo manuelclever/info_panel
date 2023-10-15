@@ -1,6 +1,10 @@
 :root {
     --width: 800px;
-    --height: 400px;
+    --height: 480px;
+}
+
+body {
+    margin: 0px;
 }
 
 td {
