@@ -10,6 +10,7 @@ use crate::filesystem::FileSystemHandler;
 
 mod weather_entry;
 pub(crate) mod parsing;
+mod city_entry;
 
 pub struct OpenWeatherClient {
     api_key: String,
