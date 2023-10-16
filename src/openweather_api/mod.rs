@@ -169,13 +169,16 @@ fn need_new_file(path: &str) -> bool {
 mod test {
     use crate::openweather_api::OpenWeatherClient;
 
-    #[test]
-    fn make_request_3h_5d() {
+    #[tokio::test]
+    async fn make_request_3h_5d() {
         let result: Result<OpenWeatherClient,String> = OpenWeatherClient::new(&"data/openweathermap_prod.conf");
 
         match result {
             Ok(client) => {
-                let json_answer = client.make_request_forecast_3h_5d();
+                let json_answer = match client.make_request_forecast_3h_5d().await {
+                    Ok(json_answer) => json_answer,
+                    Err(_) => return assert!(false)
+                };
 
                 match json::parse(&json_answer) {
                     Ok(json_value) => {
