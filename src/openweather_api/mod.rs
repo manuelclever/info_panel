@@ -74,7 +74,7 @@ impl OpenWeatherClient {
         })
     }
 
-    pub(crate) async fn make_request_forecast_3h_5d(&self) -> String {
+    pub(crate) async fn make_request_forecast_3h_5d(&self) -> Result<String, String> {
         let geocoding_url = format!("{}?lat={}&lon={}&units={}&lang={}&appid={}",
                                     self.url, self.lat,self.lon,self.units,self.lang,self.api_key);
 
@@ -86,14 +86,14 @@ impl OpenWeatherClient {
 
                 if response.status().is_success() {
                     match response.text().await {
-                        Ok(json) => json,
-                        _ => format!("Request failed")
+                        Ok(json) => Ok(json),
+                        _ => Err(format!("Request failed"))
                     }
                 } else {
-                    format!("Request failed with status code {}.", response.status().to_string())
+                    Err(format!("Request failed with status code {}.", response.status().to_string()))
                 }
             },
-            _ => format!("Request failed")
+            _ => Err(format!("Request failed"))
         }
     }
 

@@ -1,5 +1,6 @@
 use icalendar::Calendar as ICalendar;
 use icalendar::parser::{read_calendar as read_icalendar, unfold};
+use log::error;
 use reqwest::Error as ReqwestError;
 
 use crate::webdav::calendar::Calendar;
@@ -16,8 +17,14 @@ pub mod calendar;
 
 pub(crate) fn read_calendar(conf: &str, calendar_name: &str) -> Option<Calendar>{
     // connection
-    let result: Result<Connection,String> = Connection::new(&format!("data/{}",conf));
-    let connection: Connection = result.unwrap();
+    let path_config = format!("data/{}",conf);
+    let connection: Connection = match Connection::new(&path_config) {
+        Ok(connection) => connection,
+        Err(e) => {
+            error!("Error creating connection to calendar based on config '{}': {}", path_config, e);
+            return None;
+        }
+    };
 
     let mut icals: Vec<ICalendar> = Vec::new();
 

@@ -1,13 +1,17 @@
 use std::fs;
+use std::fs::File;
 use std::net::SocketAddr;
 
 use axum::handler::HandlerWithoutStateExt;
 use axum::response::{Html, IntoResponse};
 use axum::Router;
 use axum::routing::get;
-use dirs::home_dir;
+use chrono::Utc;
 use icalendar::Component;
+use log::*;
+use simplelog::*;
 
+use crate::filesystem::FileSystemHandler;
 use crate::openweather_api::OpenWeatherClient;
 use crate::openweather_api::parsing::parse_json_open_weather;
 
@@ -17,13 +21,35 @@ pub mod filesystem;
 
 #[tokio::main]
 async fn main() {
-    let home_dir = match home_dir() {
-        Some(dir) => dir,
-        None => {
-            eprintln!("Failed to get the user's home directory");
+    let filesystem_handler = match FileSystemHandler::new() {
+        Ok(handler) => handler,
+        Err(_) => {
+            eprintln!("Failed to create FileSystemHandler");
             return;
         }
     };
+
+    // create logger
+    match CombinedLogger::init(
+        vec![
+            TermLogger::new(
+                LevelFilter::Info,
+                Config::default(),
+                TerminalMode::Mixed,
+                ColorChoice::Auto),
+            WriteLogger::new(
+                LevelFilter::Info,
+                Config::default(),
+                File::create(format!("{}/log_{}.log", &filesystem_handler.home_directory_software, Utc::now().format("%Y-%m-%d").to_string())).unwrap(),
+            ),
+        ]
+    ) {
+        Ok(_) => (),
+        Err(_) => {
+            eprintln!("Failed to create Logger");
+            return
+        }
+    }
 
     // Route all requests on "/" endpoint to anonymous handler.
     //
@@ -32,7 +58,7 @@ async fn main() {
 
     // A closure or a function can be used as handler.
     let app = Router::new()
-        .nest("/weather_icons", axum_static::static_router(home_dir.join(".InfoPanel/weather_icons")))
+        .nest("/weather_icons", axum_static::static_router(&format!("{}/weather_icons", &filesystem_handler.home_directory_software)))
         .nest("/styles", axum_static::static_router("data/styles"))
         .route("/", get(handler));
 
@@ -40,6 +66,7 @@ async fn main() {
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 
     // Use `hyper::server::Server` which is re-exported through `axum::Server` to serve the app.
+    info!("Starting service...");
     axum::Server::bind(&addr)
         // Hyper server takes a make service.
         .serve(app.into_make_service())
@@ -54,83 +81,97 @@ async fn handler() -> Html<String> {
 
     return match html_file {
         Ok(html_content) => {
-            let modified_html = set_weather_data(&html_content).await;
+            return match set_weather_data(&html_content).await {
+                Ok(modified_html) => Html(modified_html),
+                Err(e) => {
+                    error!("Error setting weather data: {}", e);
+                    Html(html_content)
+                }
+            }
 
-            Html(modified_html)
+
         },
-        Err(_) => Html(format!("Error reading HTML file. Is the path '{}' correct?", path))
+        Err(_) => {
+            error!("Error reading HTML file. Is the path '{}' correct?", path);
+            Html(format!("Error reading HTML file. Check the log file."))
+        }
     }
 }
 
-async fn set_weather_data(html_content: &String) -> String {
+async fn set_weather_data(html_content: &String) -> Result<String, String> {
     let result = OpenWeatherClient::new("data/openweathermap_prod.conf");
 
     return match result {
         Ok(client) => {
-            let json = client.make_request_forecast_3h_5d().await;
-            let option = parse_json_open_weather(&json);
+            match client.make_request_forecast_3h_5d().await {
+                Ok(json) => {
+                    let option = parse_json_open_weather(&json);
 
-            return match option {
-                Some(weather) => {
-                    let weather_entry_current = weather.get(0).unwrap();
-                    let weather_entry_3 = weather.get(1).unwrap();
-                    let weather_entry_6 = weather.get(2).unwrap();
-                    let weather_entry_9 = weather.get(3).unwrap();
+                    return match option {
+                        Some(weather) => {
+                            let weather_entry_current = weather.get(0).unwrap();
+                            let weather_entry_3 = weather.get(1).unwrap();
+                            let weather_entry_6 = weather.get(2).unwrap();
+                            let weather_entry_9 = weather.get(3).unwrap();
 
-                    let mut modified_html_content = html_content.replace("#temp_current", weather_entry_current.main.temp.to_string().as_str());
-                    modified_html_content = modified_html_content.replace("#desc", weather_entry_current.weather.description.to_string().as_str());
-                    modified_html_content = modified_html_content.replace("#feel_like_current", weather_entry_current.main.feels_like.to_string().as_str());
-                    modified_html_content = modified_html_content.replace("#humidity_current", weather_entry_current.main.humidity.to_string().as_str());
-                    modified_html_content = modified_html_content.replace("#max_temp_current", weather_entry_current.main.temp_max.to_string().as_str());
-                    modified_html_content = modified_html_content.replace("#rain_current", weather_entry_current.precipitation_probability.to_string().as_str());
+                            let mut modified_html_content = html_content.replace("#temp_current", weather_entry_current.main.temp.to_string().as_str());
+                            modified_html_content = modified_html_content.replace("#desc", weather_entry_current.weather.description.to_string().as_str());
+                            modified_html_content = modified_html_content.replace("#feel_like_current", weather_entry_current.main.feels_like.to_string().as_str());
+                            modified_html_content = modified_html_content.replace("#humidity_current", weather_entry_current.main.humidity.to_string().as_str());
+                            modified_html_content = modified_html_content.replace("#max_temp_current", weather_entry_current.main.temp_max.to_string().as_str());
+                            modified_html_content = modified_html_content.replace("#rain_current", weather_entry_current.precipitation_probability.to_string().as_str());
 
-                    modified_html_content = modified_html_content.replace("#time_+3", weather_entry_3.time_of_forecast.time().to_string().as_str());
-                    modified_html_content = modified_html_content.replace("#temp_+3", weather_entry_3.main.temp.to_string().as_str());
-                    modified_html_content = modified_html_content.replace("#rain_+3", weather_entry_3.precipitation_probability.to_string().as_str());
+                            modified_html_content = modified_html_content.replace("#time_+3", weather_entry_3.time_of_forecast.time().to_string().as_str());
+                            modified_html_content = modified_html_content.replace("#temp_+3", weather_entry_3.main.temp.to_string().as_str());
+                            modified_html_content = modified_html_content.replace("#rain_+3", weather_entry_3.precipitation_probability.to_string().as_str());
 
-                    modified_html_content = modified_html_content.replace("#time_+6", weather_entry_6.time_of_forecast.time().to_string().as_str());
-                    modified_html_content = modified_html_content.replace("#temp_+6", weather_entry_6.main.temp.to_string().as_str());
-                    modified_html_content = modified_html_content.replace("#rain_+6", weather_entry_6.precipitation_probability.to_string().as_str());
+                            modified_html_content = modified_html_content.replace("#time_+6", weather_entry_6.time_of_forecast.time().to_string().as_str());
+                            modified_html_content = modified_html_content.replace("#temp_+6", weather_entry_6.main.temp.to_string().as_str());
+                            modified_html_content = modified_html_content.replace("#rain_+6", weather_entry_6.precipitation_probability.to_string().as_str());
 
-                    modified_html_content = modified_html_content.replace("#time_+9", weather_entry_9.time_of_forecast.time().to_string().as_str());
-                    modified_html_content = modified_html_content.replace("#temp_+9", weather_entry_9.main.temp.to_string().as_str());
-                    modified_html_content = modified_html_content.replace("#rain_+9", weather_entry_9.precipitation_probability.to_string().as_str());
+                            modified_html_content = modified_html_content.replace("#time_+9", weather_entry_9.time_of_forecast.time().to_string().as_str());
+                            modified_html_content = modified_html_content.replace("#temp_+9", weather_entry_9.main.temp.to_string().as_str());
+                            modified_html_content = modified_html_content.replace("#rain_+9", weather_entry_9.precipitation_probability.to_string().as_str());
 
 
-                    match client.download_icon(&weather_entry_current.weather.icon).await  {
-                        Ok(_) => println!("Success reading icon current weather."),
-                        Err(msg) => println!("{}",msg)
+                            match client.download_icon(&weather_entry_current.weather.icon).await  {
+                                Ok(_) => debug!("Success reading icon current weather."),
+                                Err(msg) => error!("{}",msg)
 
+                            }
+
+                            match client.download_icon(&weather_entry_3.weather.icon).await  {
+                                Ok(_) => debug!("Success reading icon weather+3."),
+                                Err(msg) => error!("{}",msg)
+
+                            }
+
+                            match client.download_icon(&weather_entry_6.weather.icon).await  {
+                                Ok(_) => debug!("Success reading icon weather+6."),
+                                Err(msg) => error!("{}",msg)
+
+                            }
+
+                            match client.download_icon(&weather_entry_9.weather.icon).await  {
+                                Ok(_) => debug!("Success reading icon weather+9."),
+                                Err(msg) => error!("{}",msg)
+
+                            }
+
+                            modified_html_content = modified_html_content.replace("#icon_current", &format!("/weather_icons/{}.png", &weather_entry_current.weather.icon)).to_string();
+                            modified_html_content = modified_html_content.replace("#icon_+3", &format!("/weather_icons/{}.png", &weather_entry_3.weather.icon)).to_string();
+                            modified_html_content = modified_html_content.replace("#icon_+6", &format!("/weather_icons/{}.png", &weather_entry_6.weather.icon)).to_string();
+                            modified_html_content = modified_html_content.replace("#icon_+9", &format!("/weather_icons/{}.png", &weather_entry_9.weather.icon)).to_string();
+
+                            Ok(modified_html_content)
+                        },
+                        None => Err(format!("Couldn't find weather entry in json response: {}", json))
                     }
-
-                    match client.download_icon(&weather_entry_3.weather.icon).await  {
-                        Ok(_) => println!("Success reading icon weather+3."),
-                        Err(msg) => println!("{}",msg)
-
-                    }
-
-                    match client.download_icon(&weather_entry_6.weather.icon).await  {
-                        Ok(_) => println!("Success reading icon weather+6."),
-                        Err(msg) => println!("{}",msg)
-
-                    }
-
-                    match client.download_icon(&weather_entry_9.weather.icon).await  {
-                        Ok(_) => println!("Success reading icon weather+9."),
-                        Err(msg) => println!("{}",msg)
-
-                    }
-
-                    modified_html_content = modified_html_content.replace("#icon_current", &format!("/weather_icons/{}.png", &weather_entry_current.weather.icon)).to_string();
-                    modified_html_content = modified_html_content.replace("#icon_+3", &format!("/weather_icons/{}.png", &weather_entry_3.weather.icon)).to_string();
-                    modified_html_content = modified_html_content.replace("#icon_+6", &format!("/weather_icons/{}.png", &weather_entry_6.weather.icon)).to_string();
-                    modified_html_content = modified_html_content.replace("#icon_+9", &format!("/weather_icons/{}.png", &weather_entry_9.weather.icon)).to_string();
-
-                    modified_html_content
                 },
-                None => html_content.clone()
+                Err(e) => Err(format!("Error making forecast request: {}", e))
             }
+
         },
-        Err(_) => html_content.clone()
+        Err(e) => Err(format!("Couldn't create OpenWeatherClient: {}", e))
     }
 }

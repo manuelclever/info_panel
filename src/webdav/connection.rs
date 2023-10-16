@@ -70,7 +70,7 @@ impl<'a> Connection {
         let xml: String = self.get_xml_of_calendar(name).map_err(|e|{
             format!("Error extracting xml: {}", e)
         })?;
-        Ok(self.parse_responses(&xml))
+        self.parse_responses(&xml)
     }
 
     fn get_xml_of_calendar(&self, name: &str) -> Result<String, String> {
@@ -89,22 +89,34 @@ impl<'a> Connection {
         }
     }
 
-    fn parse_responses(&self, xml: &String) -> Vec<Response> {
-        let xml_responses: Vec<Cow<str>> = parsing::extract_response_xml(xml);
+    fn parse_responses(&self, xml: &String) -> Result<Vec<Response>, String> {
+        let xml_responses: Vec<Cow<str>> = match parsing::extract_response_xml(xml) {
+            Ok(xml_responses) => xml_responses,
+            Err(e) => return Err(format!("Error extracting xml responses: {}", e))
+        };
         let mut responses: Vec<Response> = Vec::new();
 
         for xml_response in xml_responses {
-            let href = parsing::extract_href_xml(xml_response.as_ref());
-            let propstat = parsing::extract_propstat_xml(xml_response.as_ref());
-            let prop = parsing::parse_prop(propstat.as_ref());
+            let href = match parsing::extract_href_xml(xml_response.as_ref()) {
+                Ok(href) => href,
+                Err(e) => return Err(format!("Error extracting href: {}", e))
+            };
+            
+            let propstat = match parsing::extract_propstat_xml(xml_response.as_ref()) {
+                Ok(propstat) => propstat,
+                Err(e) => return Err(format!("Error extracting propstat xml: {}", e))
+            };
+            
+            let prop = match parsing::parse_prop(propstat.as_ref()) {
+                Ok(prop) => prop,
+                Err(e) => return Err(format!("Error parsing prop: {}", e))
+            };
+            
             let response: Response = Response::new(href.as_ref(), prop);
             responses.push(response);
         }
-        responses
+        Ok(responses)
     }
-
-
-
 }
 
 impl<'a> PartialEq for Connection {

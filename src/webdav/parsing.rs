@@ -11,7 +11,7 @@ use response::prop::Prop;
 
 use crate::webdav::response;
 
-pub fn extract_response_xml (string: &str) -> Vec<Cow<str>> {
+pub fn extract_response_xml (string: &str) -> Result<Vec<Cow<str>>, String> {
     let mut reader = Reader::from_str(string);
     reader.trim_text(true);
 
@@ -22,7 +22,7 @@ pub fn extract_response_xml (string: &str) -> Vec<Cow<str>> {
 
     loop {
         match reader.read_event() {
-            Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
+            Err(e) => return Err(format!("Error at position {}: {:?}", reader.buffer_position(), e)),
             Ok(QuickXmlEvent::Eof) => break,
             Ok(QuickXmlEvent::Start(e)) => {
                 match e.name().as_ref() {
@@ -36,10 +36,10 @@ pub fn extract_response_xml (string: &str) -> Vec<Cow<str>> {
             _ => (),
         }
     }
-    xml_responses
+    Ok(xml_responses)
 }
 
-pub fn extract_href_xml (string: &str) -> Cow<str> {
+pub fn extract_href_xml (string: &str) -> Result<Cow<str>, String> {
     let mut reader = Reader::from_str(string);
     reader.trim_text(true);
 
@@ -49,7 +49,7 @@ pub fn extract_href_xml (string: &str) -> Cow<str> {
     get_inner_xml(reader,start_response,end_response)
 }
 
-pub fn extract_propstat_xml (string: &str) -> Cow<str> {
+pub fn extract_propstat_xml (string: &str) -> Result<Cow<str>, String> {
     let mut reader = Reader::from_str(string);
     reader.trim_text(true);
 
@@ -59,17 +59,21 @@ pub fn extract_propstat_xml (string: &str) -> Cow<str> {
     get_inner_xml(reader,start_response,end_response)
 }
 
-fn get_inner_xml<'a>(mut reader: Reader<&'a [u8]>, start_response: BytesStart, end_response: BytesEnd) -> Cow<'a, str> {
+fn get_inner_xml<'a>(mut reader: Reader<&'a [u8]>, start_response: BytesStart, end_response: BytesEnd) -> Result<Cow<'a, str>, String> {
     loop {
         match reader.read_event() {
-            Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
+            Err(e) => return Err(format!("Error at position {}: {:?}", reader.buffer_position(), e)),
             Ok(QuickXmlEvent::Eof) => break,
             Ok(QuickXmlEvent::Start(e)) => {
                 e.name().into_inner();
                 match e.name().as_ref() {
                     name if name == start_response.name().as_ref() => {
-                        let inner_xml = reader.read_text(end_response.name()).unwrap();
-                        return inner_xml
+
+                        match reader.read_text(end_response.name()) {
+                            Ok(inner_xml) => return Ok(inner_xml),
+                            Err(_) => ()
+                        }
+
                     },
                     _ => (),
                 }
@@ -77,10 +81,10 @@ fn get_inner_xml<'a>(mut reader: Reader<&'a [u8]>, start_response: BytesStart, e
             _ => (),
         }
     }
-    Cow::from("")
+    Ok(Cow::from(""))
 }
 
-pub fn parse_prop(string: &str) -> Prop {
+pub fn parse_prop(string: &str) -> Result<Prop, String> {
     let mut reader = Reader::from_str(string);
     reader.trim_text(true);
 
@@ -117,7 +121,7 @@ pub fn parse_prop(string: &str) -> Prop {
 
     loop {
         match reader.read_event() {
-            Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
+            Err(e) => return Err(format!("Error at position {}: {:?}", reader.buffer_position(), e)),
             Ok(QuickXmlEvent::Eof) => break,
             Ok(QuickXmlEvent::Start(e)) => {
                 e.name().into_inner();
@@ -156,7 +160,7 @@ pub fn parse_prop(string: &str) -> Prop {
             _ => (),
         }
     }
-    prop
+    Ok(prop)
 }
 
 pub fn parse_date(property: &Property) -> NaiveDateTime {
@@ -223,7 +227,7 @@ mod tests {
     fn response_extraction() {
         let xml = get_xml("calendar.xml");
 
-        let xml_responses: Vec<Cow<str>> = parsing::extract_response_xml(&xml);
+        let xml_responses: Vec<Cow<str>> = parsing::extract_response_xml(&xml).unwrap();
         let mut expected = Vec::new();
         expected.push(Cow::from("
         <d:href>/nextcloud/remote.php/dav/calendars/user/abfall/</d:href>
@@ -309,7 +313,7 @@ mod tests {
     fn href_extraction() {
         let xml = get_xml("response.xml");
 
-        let href = parsing::extract_href_xml(xml.as_ref());
+        let href = parsing::extract_href_xml(xml.as_ref()).unwrap();
         let expected: Cow<str> = Cow::from("/nextcloud/remote.php/dav/calendars/user/abfall/D9F0AFEB-6B0A-434A-99B8-EE64C8E27526.ics");
 
         assert_eq!(expected, href);
@@ -319,7 +323,7 @@ mod tests {
     fn propstat_extraction() {
         let xml = get_xml("response.xml");
 
-        let propstat = parsing::extract_propstat_xml(xml.as_ref());
+        let propstat = parsing::extract_propstat_xml(xml.as_ref()).unwrap();
         let expected: Cow<str> = Cow::from("
         <d:prop>
             <d:getlastmodified>Mon, 22 Aug 2022 18:10:09 GMT</d:getlastmodified>
@@ -337,7 +341,7 @@ mod tests {
     fn prop_parsing() {
         let prop_string = get_xml("prop.xml");
 
-        let prop: Prop = parse_prop(&prop_string);
+        let prop: Prop = parse_prop(&prop_string).unwrap();
 
         let expected_prop: Prop = Prop {
             resourcetype: String::from(""),
