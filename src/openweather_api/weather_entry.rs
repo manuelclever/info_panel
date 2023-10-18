@@ -2,27 +2,33 @@ use chrono::NaiveDateTime;
 
 #[derive(Debug)]
 pub struct WeatherEntry {
+    pub city: String,
+    pub timezone: i64,
     pub time_of_forecast: NaiveDateTime,
     pub main: Main,
     pub weather: Weather,
+    pub rain: Rain,
     pub clouds: Clouds,
     pub wind: Wind,
     pub visibility: u16,
     pub precipitation_probability: u8,
-    pub part_of_day: char
+    pub sys: Sys
 }
 
 impl WeatherEntry {
     pub(crate) fn new() -> Self {
         WeatherEntry{
+            city: String::from(" "),
+            timezone: 0,
             time_of_forecast: Default::default(),
             main: Main::new(),
             weather: Weather::new(),
+            rain: Rain::new(),
             clouds: Clouds::new(),
             wind: Wind::new(),
             visibility: 0,
             precipitation_probability: 0,
-            part_of_day: ' ',
+            sys: Sys::new(),
         }
     }
 }
@@ -36,7 +42,7 @@ impl PartialEq for WeatherEntry {
             self.wind == other.wind &&
             self.visibility == other.visibility &&
             self.precipitation_probability == other.precipitation_probability &&
-            self.part_of_day == other.part_of_day
+            self.sys == other.sys
     }
 }
 
@@ -106,6 +112,27 @@ impl PartialEq for Weather {
 }
 
 #[derive(Debug)]
+pub struct Rain {
+    pub hour_1: f32,
+    pub hour_3: f32
+}
+
+impl Rain {
+    pub(crate) fn new() -> Self {
+        Rain{
+            hour_1: 0.0,
+            hour_3: 0.0}
+    }
+}
+
+impl PartialEq for Rain {
+    fn eq(&self, other: &Self) -> bool {
+        self.hour_1 == other.hour_1 &&
+            self.hour_3 == other.hour_3
+    }
+}
+
+#[derive(Debug)]
 pub struct Clouds {
     pub cloudiness: u8
 }
@@ -144,5 +171,33 @@ impl PartialEq for Wind {
         self.speed == other.speed &&
             self.direction_deg == other.direction_deg &&
             self.gust == other.gust
+    }
+}
+
+#[derive(Debug)]
+pub struct Sys {
+    pub part_of_day: char,
+    pub country: String,
+    pub sunrise: NaiveDateTime,
+    pub sunset: NaiveDateTime
+}
+
+impl Sys {
+    pub(crate) fn new() -> Self {
+        Sys{
+            part_of_day: ' ',
+            country: String::from(" "),
+            sunrise: NaiveDateTime::default(),
+            sunset: NaiveDateTime::default()
+        }
+    }
+}
+
+impl PartialEq for Sys {
+    fn eq(&self, other: &Self) -> bool {
+        self.part_of_day == other.part_of_day &&
+            self.country == other.country &&
+            self.sunrise == other.sunrise &&
+            self.sunset == other.sunset
     }
 }

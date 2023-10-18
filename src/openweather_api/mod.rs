@@ -9,11 +9,11 @@ use crate::filesystem::FileSystemHandler;
 
 mod weather_entry;
 pub(crate) mod parsing;
-mod city_entry;
 
 pub struct OpenWeatherClient {
     api_key: String,
-    pub url: String,
+    pub url_current: String,
+    pub url_5d_3h: String,
     pub url_img: String,
     pub lat: f64,
     pub lon: f64,
@@ -25,7 +25,8 @@ pub struct OpenWeatherClient {
 impl OpenWeatherClient {
     pub(crate) fn new(path_config: &str) -> Result<Self,String> {
         let mut api_key: String = String::from("");
-        let mut url: String = String::from("");
+        let mut url_current: String = String::from("");
+        let mut url_5d_3h: String = String::from("");
         let mut url_img: String = String::from("");
         let mut lat: f64 = 0f64;
         let mut lon: f64 = 0f64;
@@ -49,7 +50,8 @@ impl OpenWeatherClient {
                     let split: Vec<&str> = line.split('=').collect();
                     if let [key, value] = split.as_slice() {
                         match *key {
-                            "url" => url = value.to_string(),
+                            "url_current" => url_current = value.to_string(),
+                            "url_5d_3h" => url_5d_3h = value.to_string(),
                             "url_img" => url_img = value.to_string(),
                             "units" => units = value.to_string(),
                             "lang" => lang = value.to_string(),
@@ -65,7 +67,8 @@ impl OpenWeatherClient {
 
         Ok(OpenWeatherClient {
             api_key,
-            url,
+            url_current,
+            url_5d_3h,
             url_img,
             lat,
             lon,
@@ -74,11 +77,34 @@ impl OpenWeatherClient {
         })
     }
 
+    pub(crate) async fn make_request_current(&self) -> Result<String, String> {
+        let geocoding_url = format!("{}?lat={}&lon={}&units={}&lang={}&appid={}",
+                                    self.url_current, self.lat, self.lon, self.units, self.lang, self.api_key);
+
+        println!("New Request (current): {}", geocoding_url);
+        let client = Client::new();
+
+        return match client.get(geocoding_url).send().await {
+            Ok(response) => {
+
+                if response.status().is_success() {
+                    match response.text().await {
+                        Ok(json) => Ok(json),
+                        _ => Err(format!("Request failed"))
+                    }
+                } else {
+                    Err(format!("Request failed with status code {}.", response.status().to_string()))
+                }
+            },
+            _ => Err(format!("Request failed"))
+        }
+    }
+
     pub(crate) async fn make_request_forecast_3h_5d(&self) -> Result<String, String> {
         let geocoding_url = format!("{}?lat={}&lon={}&units={}&lang={}&appid={}",
-                                    self.url, self.lat,self.lon,self.units,self.lang,self.api_key);
+                                    self.url_5d_3h, self.lat, self.lon, self.units, self.lang, self.api_key);
 
-        println!("New Request: {}", geocoding_url);
+        println!("New Request (forecast 3h 5d): {}", geocoding_url);
         let client = Client::new();
 
         return match client.get(geocoding_url).send().await {
