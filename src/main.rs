@@ -13,7 +13,7 @@ use simplelog::*;
 
 use crate::filesystem::FileSystemHandler;
 use crate::openweather_api::OpenWeatherClient;
-use crate::openweather_api::parsing::{parse_json_open_weather, WeatherOrCity};
+use crate::openweather_api::parsing::{parse_json_open_weather, utc_to_local_date_time, WeatherOrCity};
 
 mod webdav;
 mod openweather_api;
@@ -127,15 +127,15 @@ async fn set_weather_data(html_content: &String) -> Result<String, String> {
                                         modified_html_content = modified_html_content.replace("#max_temp_current", weather_entry_current.main.temp_max.to_string().as_str());
                                         modified_html_content = modified_html_content.replace("#rain_current", weather_entry_current.precipitation_probability.to_string().as_str());
 
-                                        modified_html_content = modified_html_content.replace("#time_+3", weather_entry_3.time_of_forecast.time().to_string().as_str());
+                                        modified_html_content = modified_html_content.replace("#time_+3", utc_to_local_date_time(weather_entry_3.time_of_forecast).time().to_string().as_str());
                                         modified_html_content = modified_html_content.replace("#temp_+3", weather_entry_3.main.temp.to_string().as_str());
                                         modified_html_content = modified_html_content.replace("#rain_+3", weather_entry_3.precipitation_probability.to_string().as_str());
 
-                                        modified_html_content = modified_html_content.replace("#time_+6", weather_entry_6.time_of_forecast.time().to_string().as_str());
+                                        modified_html_content = modified_html_content.replace("#time_+6", utc_to_local_date_time(weather_entry_6.time_of_forecast).time().to_string().as_str());
                                         modified_html_content = modified_html_content.replace("#temp_+6", weather_entry_6.main.temp.to_string().as_str());
                                         modified_html_content = modified_html_content.replace("#rain_+6", weather_entry_6.precipitation_probability.to_string().as_str());
 
-                                        modified_html_content = modified_html_content.replace("#time_+9", weather_entry_9.time_of_forecast.time().to_string().as_str());
+                                        modified_html_content = modified_html_content.replace("#time_+9", utc_to_local_date_time(weather_entry_9.time_of_forecast).time().to_string().as_str());
                                         modified_html_content = modified_html_content.replace("#temp_+9", weather_entry_9.main.temp.to_string().as_str());
                                         modified_html_content = modified_html_content.replace("#rain_+9", weather_entry_9.precipitation_probability.to_string().as_str());
 
@@ -170,8 +170,8 @@ async fn set_weather_data(html_content: &String) -> Result<String, String> {
                                         modified_html_content = modified_html_content.replace("#icon_+9", &format!("/weather_icons/{}.png", &weather_entry_9.weather.icon)).to_string();
                                     },
                                     WeatherOrCity::City(city_entry) => {
-                                        modified_html_content = modified_html_content.replace("#sunrise", city_entry.sunrise.to_string().as_str());
-                                        modified_html_content = modified_html_content.replace("#sunset", city_entry.sunset.to_string().as_str());
+                                        modified_html_content = modified_html_content.replace("#sunrise", utc_to_local_date_time(city_entry.sunrise).time().to_string().as_str());
+                                        modified_html_content = modified_html_content.replace("#sunset", utc_to_local_date_time(city_entry.sunset).time().to_string().as_str());
                                     }
                                     _ => ()
                                 }

@@ -1,16 +1,16 @@
-use chrono::NaiveTime;
+use chrono::NaiveDateTime;
 
 #[derive(Debug)]
 pub struct CityEntry {
-    pub sunrise: NaiveTime,
-    pub sunset: NaiveTime
+    pub sunrise: NaiveDateTime,
+    pub sunset: NaiveDateTime
 }
 
 impl CityEntry {
     pub(crate) fn new() -> Self {
         CityEntry{
-            sunrise: NaiveTime::default(),
-            sunset: NaiveTime::default()
+            sunrise: NaiveDateTime::default(),
+            sunset: NaiveDateTime::default()
         }
     }
 }

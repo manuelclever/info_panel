@@ -1,4 +1,6 @@
-use chrono::NaiveDateTime;
+use std::ops::Add;
+
+use chrono::{Duration, Local, NaiveDateTime};
 use json::JsonValue;
 
 use crate::openweather_api::city_entry::CityEntry;
@@ -154,13 +156,19 @@ fn convert_to_city_entry(json: &JsonValue) -> CityEntry {
 
     for entry in json.entries() {
         match entry.0 {
-            "sunrise" => city_entry.sunrise = NaiveDateTime::from_timestamp_opt(entry.1.to_string().parse().unwrap_or_default(),0).unwrap_or_default().time(),
-            "sunset" => city_entry.sunset = NaiveDateTime::from_timestamp_opt(entry.1.to_string().parse().unwrap_or_default(),0).unwrap_or_default().time(),
+            "sunrise" => city_entry.sunrise = NaiveDateTime::from_timestamp_opt(entry.1.to_string().parse().unwrap_or_default(),0).unwrap_or_default(),
+            "sunset" => city_entry.sunset = NaiveDateTime::from_timestamp_opt(entry.1.to_string().parse().unwrap_or_default(),0).unwrap_or_default(),
             _default => ()
         }
     }
 
     city_entry
+}
+
+pub(crate) fn utc_to_local_date_time(naiveDateTime: NaiveDateTime) -> NaiveDateTime {
+    let offset: i64 = Local::now().offset().local_minus_utc().into();
+
+    naiveDateTime.add(Duration::seconds(offset))
 }
 
 #[cfg(test)]
@@ -241,8 +249,12 @@ mod test {
                             }
                         ]),
                         WeatherOrCity::City(CityEntry{
-                            sunrise: NaiveTime::from_hms_opt(05,51,21).unwrap(),
-                            sunset: NaiveTime::from_hms_opt(16,36,45).unwrap() })
+                            sunrise: NaiveDateTime::new(
+                                NaiveDate::from_ymd_opt(2023,10,16).unwrap(),
+                                NaiveTime::from_hms_opt(05,51,21).unwrap()),
+                            sunset: NaiveDateTime::new(
+                                NaiveDate::from_ymd_opt(2023,10,16).unwrap(),
+                                NaiveTime::from_hms_opt(16,36,45).unwrap()),})
                     ];
                 assert_eq!(output,output_expected);
             },
